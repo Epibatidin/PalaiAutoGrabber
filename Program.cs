@@ -5,8 +5,9 @@ using System.Net.Http;
 using System.Text;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Configuration;
+using PalaiAutoGrabber;
 
-namespace PalimPalim
+namespace PalaiAutoGrabber
 {
     public class Program
     {

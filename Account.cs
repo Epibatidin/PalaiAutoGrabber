@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace PalimPalim
+namespace PalaiAutoGrabber
 {
 
     public class Configuration
