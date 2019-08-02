@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using HtmlAgilityPack;
 using Microsoft.Extensions.Configuration;
-using PalaiAutoGrabber;
 
 namespace PalaiAutoGrabber
 {
@@ -27,12 +23,13 @@ namespace PalaiAutoGrabber
             var palaiConfig = config.Get<Configuration>();
 
             bool justEndWhenDone = palaiConfig.Silent;
-            var httpHelper = new HttpHelper();
+            var responseHelper = new ResponseHelper();
+            var formHelper = new FormHelper();
             foreach (var account in palaiConfig.Accounts)
             {
                 try
                 {                    
-                    var palaiClient = PalaiClient.CreateClient(httpHelper);
+                    var palaiClient = new PalaiClient(responseHelper, formHelper);
 
                     var loggedIn = palaiClient.Login(account);
 
@@ -54,6 +51,7 @@ namespace PalaiAutoGrabber
                 {
                     justEndWhenDone = false;
                     Console.WriteLine(e.Message);
+                    throw;
                 }
             };
             Console.WriteLine("Nothing more todo");
@@ -74,5 +72,11 @@ namespace PalaiAutoGrabber
 
             client.PostAsync("https://api.pushover.net/1/messages.json", new StringContent(toSend, Encoding.UTF8, "application/x-www-form-urlencoded")).GetAwaiter().GetResult();
         }
+        
+        public static T Await<T>(Task<T> task)
+        {
+            return task.ConfigureAwait(false).GetAwaiter().GetResult();
+        }
+
     }
 }  
