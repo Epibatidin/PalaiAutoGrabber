@@ -10,7 +10,6 @@ namespace PalaiAutoGrabber
     {
         public const string PalaiBaseUrl = "https://palai.org/de";       
         
-
         public HtmlDocument ResponseToHtml(Task<HttpResponseMessage> response)
         {
             return ResponseToHtmlAsync(response.ConfigureAwait(false).GetAwaiter().GetResult())
@@ -33,7 +32,7 @@ namespace PalaiAutoGrabber
             return htmlDoc;
         }
 
-
+        /*
         public string ExtractAuthCookie(HttpResponseMessage response)
         {
             var isSetCookie = response.Headers.TryGetValues("Set-Cookie", out var setCookies);
@@ -53,6 +52,6 @@ namespace PalaiAutoGrabber
 
             throw new Exception("Expected to find a Auth Cookie but mh there was nothing");
         }
-
+        */
     }
 }

@@ -11,9 +11,21 @@ namespace PalaiAutoGrabber
     {
         private static string authTokenName = "authenticity_token";
         
-        public string GetAuthTokenFromForm(HtmlDocument htmlDoc)
+        private HtmlNode FindFormByPostUrl(HtmlDocument htmlDoc, string postTarget)
         {
-            var formNode = htmlDoc.DocumentNode.SelectSingleNode("//form");
+            var formNodes = htmlDoc.DocumentNode.SelectNodes("//form");
+
+            foreach (var form in formNodes)
+            {
+                if (form.Attributes["action"].Value.EndsWith(postTarget))
+                    return form;
+            }
+            return null;
+        }
+
+        public string GetAuthTokenFromForm(HtmlDocument htmlDoc, string postTarget)
+        {
+            var formNode = FindFormByPostUrl(htmlDoc, postTarget);
             if (formNode == null)
                 throw new Exception("expected to be on the login page - but there was no postback form");
 
@@ -40,14 +52,7 @@ namespace PalaiAutoGrabber
             var content = new StringContent(postBackData.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
             return content;
         }
-
-
-        public IEnumerable<Tuple<string, string>> Utf8()
-        {
-            yield return Tuple.Create("utf8", '\u2713'.ToString());
-        }
-
-
+        
         public IEnumerable<Tuple<string, string>> AuthValue(string authToken)
         {
             yield return Tuple.Create(authTokenName, authToken);

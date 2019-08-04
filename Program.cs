@@ -33,25 +33,14 @@ namespace PalaiAutoGrabber
 
                     var loggedIn = palaiClient.Login(account);
 
-                    loggedIn.GrabTheCash();
-
-                    /*
-                    // finally do the important thing 
-                    var grabBasicIncomeUrl = string.Concat(palaiBaseUrl, "/users/", account.Id, "/basic_incomes");
-                    Console.WriteLine($"Using {grabBasicIncomeUrl} to grab the cash");
-
-                    var balance = CollectTheCash(grabBasicIncomeUrl, authCookie);
-                    Console.WriteLine("You are rich becasue you own " + balance + " fantasy money");
-
-                    if (palaiConfig.PushBalanceNotification)
-                        SendToPushoverApi(grabBasicIncomeUrl,balance);
-                        */
+                    var cash = loggedIn.GrabTheCash();
+                    Console.WriteLine("Current Balance : " + cash);
                 }
                 catch(Exception e)
                 {
                     justEndWhenDone = false;
                     Console.WriteLine(e.Message);
-                    throw;
+                    //throw;
                 }
             };
             Console.WriteLine("Nothing more todo");

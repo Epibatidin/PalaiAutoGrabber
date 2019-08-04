@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using static PalaiAutoGrabber.Program;
 
@@ -23,44 +22,24 @@ namespace PalaiAutoGrabber
             _client = client;
         }
         
-        private IEnumerable<Tuple<string, string>> MoreStuff()
-        {
-            yield return Tuple.Create("commit", "Abholen");
-        }
-        /*
-        private HttpClient GetHttpClient(string url)
-        {
-           
-            client.DefaultRequestHeaders.Add("Referer", url);
-            client.DefaultRequestHeaders.Add("Host", "palai.org");
-            client.DefaultRequestHeaders.Add("Cookie", _authToken.Cookie);
-            //client.DefaultRequestHeaders.Add("Origin", "https://palai.org");
-            
-            return client;
-        }
-        */
-
         public int GrabTheCash()
         {
-            var grabBasicIncomeUrl = string.Concat(ResponseHelper.PalaiBaseUrl, "/users/", _authToken.AccountId, "/basic_incomes");
+            var relativeUrl = string.Concat("/users/", _authToken.AccountId, "/basic_incomes");
+            var grabBasicIncomeUrl = ResponseHelper.PalaiBaseUrl + relativeUrl; 
 
-            //var client = GetHttpClient(grabBasicIncomeUrl);
             Console.WriteLine("Getting Income Page");
             var initalGet = Await(_client.GetAsync(grabBasicIncomeUrl));
             var htmlDoc = _responseHelper.ResponseToHtml(initalGet);
-            var authToken = _formHelper.GetAuthTokenFromForm(htmlDoc);
-            _responseHelper.ExtractAuthCookie(initalGet);
+            var authToken = _formHelper.GetAuthTokenFromForm(htmlDoc, relativeUrl);
+           
 
             var formValues = _formHelper.FillForm(_formHelper.AuthValue(authToken));
-            Console.WriteLine("So then lets get dangerous");
-
-            _client.DefaultRequestHeaders.Remove("Referer");
-            _client.DefaultRequestHeaders.Add("Referer", grabBasicIncomeUrl);
-
+            Console.WriteLine("So then grab the cash");
+            
             var response = Await(_client.PostAsync(grabBasicIncomeUrl, formValues));
+
             var balancePostbackResult = _responseHelper.ResponseToHtml(response);
-            var cookie = _responseHelper.ExtractAuthCookie(response);
-            Console.WriteLine("Cookie found" + cookie);
+            
             Console.WriteLine(balancePostbackResult);
 
             var balanceNode = balancePostbackResult.DocumentNode.SelectSingleNode("//td[@class='current-balance']");
