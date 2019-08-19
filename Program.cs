@@ -13,8 +13,6 @@ namespace PalaiAutoGrabber
 
         private static void Main()
         {
-            Console.WriteLine("Yet Another Day To Grab some");
-
             ConfigurationBuilder configBuilder = new ConfigurationBuilder();
             configBuilder.AddJsonFile("appSettings.json", false);
 
@@ -27,6 +25,7 @@ namespace PalaiAutoGrabber
             var formHelper = new FormHelper();
             foreach (var account in palaiConfig.Accounts)
             {
+                Console.WriteLine("Grabbing for " + account.UserName);
                 try
                 {                    
                     var palaiClient = new PalaiClient(responseHelper, formHelper);
@@ -39,8 +38,7 @@ namespace PalaiAutoGrabber
                 catch(Exception e)
                 {
                     justEndWhenDone = false;
-                    Console.WriteLine(e.Message);
-                    //throw;
+                    Console.WriteLine("Error : " + e);                    
                 }
             };
             Console.WriteLine("Nothing more todo");
