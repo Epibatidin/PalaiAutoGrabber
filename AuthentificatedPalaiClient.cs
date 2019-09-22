@@ -37,16 +37,24 @@ namespace PalaiAutoGrabber
             Console.WriteLine("So then grab the cash");
             
             var response = Await(_client.PostAsync(grabBasicIncomeUrl, formValues));
+            if (response.StatusCode != System.Net.HttpStatusCode.Found)
+                throw new Exception("Expected a redirect to basic income page");
+            var data = Await(response.Content.ReadAsStringAsync());
+            if (!data.Contains("/basic_incomes"))
+                throw new Exception("Expected a redirect to basic income page");
 
-            var balancePostbackResult = _responseHelper.ResponseToHtml(response);
-            
-            Console.WriteLine(balancePostbackResult);
+            Console.WriteLine("Get the Basic Income page again");
+            var getForRetrieveMoneyAmount = Await(_client.GetAsync(grabBasicIncomeUrl));
+            // we got a redirect and we are not following it 
+            if(getForRetrieveMoneyAmount.StatusCode != System.Net.HttpStatusCode.Redirect)
+            {
+                Console.WriteLine("Expected 302 statuscode to basicIncome page but got : " + 
+                    getForRetrieveMoneyAmount.Headers.GetValues("Location"));
+            }
 
-            var balanceNode = balancePostbackResult.DocumentNode.SelectSingleNode("//td[@class='current-balance']");
-            if (balanceNode == null)
-                throw new Exception("I guess something went wrong there is no 'current-balance' node");
-            
-            return int.Parse(balanceNode.InnerText.Trim());
+            Console.WriteLine("I asume it worked");
+
+            return 0;
         }
     }
 }

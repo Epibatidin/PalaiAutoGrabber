@@ -27,7 +27,7 @@ namespace PalaiAutoGrabber
         {
             var formNode = FindFormByPostUrl(htmlDoc, postTarget);
             if (formNode == null)
-                throw new Exception("expected to be on the login page - but there was no postback form");
+                throw new Exception("expected to find a authToken form - but there was no postback form on " + postTarget);
 
             var authNode = formNode.SelectSingleNode(".//input[@name='" + authTokenName + "']");
             var authToken = authNode.GetAttributeValue("value", "notset");

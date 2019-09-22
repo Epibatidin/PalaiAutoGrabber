@@ -1,0 +1,1 @@
+windows knopf => "Aufgabenplanung" => import => palai.xml
