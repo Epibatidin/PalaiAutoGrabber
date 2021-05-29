@@ -33,7 +33,9 @@ namespace PalaiAutoGrabber
 
                     var loggedIn = palaiClient.Login(account);
 
-                    var cash = loggedIn.GrabTheCash();
+                    loggedIn.GrabTheCash();
+
+                    var cash = loggedIn.getCashAmountFromDashBoard();
                     Console.WriteLine("Current Balance : " + cash);
                 }
                 catch(Exception e)

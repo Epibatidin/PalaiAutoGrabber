@@ -8,28 +8,34 @@ namespace PalaiAutoGrabber
 {
     public class ResponseHelper
     {
-        public const string PalaiBaseUrl = "https://palai.org/de";       
-        
-        public HtmlDocument ResponseToHtml(Task<HttpResponseMessage> response)
+        public const string PalaiBaseUrl = "https://palai.org/de";
+
+        public HtmlDocument ResponseToHtml(Task<HttpResponseMessage> responseMessage)
         {
-            return ResponseToHtmlAsync(response.ConfigureAwait(false).GetAwaiter().GetResult())
-                .ConfigureAwait(false).GetAwaiter().GetResult();
+            return Await(ResponseToHtmlAsync(responseMessage));
         }
 
-        public HtmlDocument ResponseToHtml(HttpResponseMessage response)
+
+        public async Task<HtmlDocument> ResponseToHtmlAsync(Task<HttpResponseMessage> responseMessage)
         {
-            return Await(ResponseToHtmlAsync(response));
+            var data = await ResponseToStringAsync(responseMessage);
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(data);
+            return htmlDoc;
         }
 
-        private async static Task<HtmlDocument> ResponseToHtmlAsync(HttpResponseMessage response)
+        public string ResponseToString(Task<HttpResponseMessage> responseMessage)
         {
+            return Await(ResponseToStringAsync(responseMessage));
+        }
+        public async Task<string> ResponseToStringAsync(Task<HttpResponseMessage> responseMessage)
+        {
+            var response = await responseMessage;
             var data = await response.Content.ReadAsStringAsync();
             if (!response.IsSuccessStatusCode)
                 throw new Exception(data);
 
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(data);
-            return htmlDoc;
+            return data;
         }
 
         /*

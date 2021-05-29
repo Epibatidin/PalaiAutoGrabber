@@ -7,6 +7,7 @@
 
     public interface IAuthentificatedPalaiClient
     {
-        int GrabTheCash();
+        void GrabTheCash();
+        float getCashAmountFromDashBoard();
     }
 }

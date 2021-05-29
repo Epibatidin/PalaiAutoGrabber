@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using static PalaiAutoGrabber.Program;
 
@@ -22,13 +23,13 @@ namespace PalaiAutoGrabber
             _client = client;
         }
         
-        public int GrabTheCash()
+        public void GrabTheCash()
         {
             var relativeUrl = string.Concat("/users/", _authToken.AccountId, "/basic_incomes");
             var grabBasicIncomeUrl = ResponseHelper.PalaiBaseUrl + relativeUrl; 
 
             Console.WriteLine("Getting Income Page");
-            var initalGet = Await(_client.GetAsync(grabBasicIncomeUrl));
+            var initalGet = _client.GetAsync(grabBasicIncomeUrl);
             var htmlDoc = _responseHelper.ResponseToHtml(initalGet);
             var authToken = _formHelper.GetAuthTokenFromForm(htmlDoc, relativeUrl);
            
@@ -43,18 +44,45 @@ namespace PalaiAutoGrabber
             if (!data.Contains("/basic_incomes"))
                 throw new Exception("Expected a redirect to basic income page");
 
-            Console.WriteLine("Get the Basic Income page again");
-            var getForRetrieveMoneyAmount = Await(_client.GetAsync(grabBasicIncomeUrl));
-            // we got a redirect and we are not following it 
-            if(getForRetrieveMoneyAmount.StatusCode != System.Net.HttpStatusCode.Redirect)
+        }
+
+
+        public float getCashAmountFromDashBoard()
+        {
+            var relativeUrl = string.Concat("/users/", _authToken.AccountId, "/account/dashboard");
+            var dashboardurl = ResponseHelper.PalaiBaseUrl + relativeUrl;
+
+            Console.WriteLine("Getting Dashboard Page");
+            var initalGet = _client.GetAsync(dashboardurl);
+            var documentContent = _responseHelper.ResponseToString(initalGet);
+
+            int start = 0;
+
+            start = documentContent.IndexOf("/users/"+ _authToken.AccountId + "/telephone_number_claim");
+            if(start != -1)
             {
-                Console.WriteLine("Expected 302 statuscode to basicIncome page but got : " + 
-                    getForRetrieveMoneyAmount.Headers.GetValues("Location"));
+                Console.WriteLine("===============================================");
+                Console.WriteLine("The Palai Account outdates soon");
+                Console.WriteLine("===============================================");
+            }
+            start = 0;
+            while (true)
+            {                
+                start = documentContent.IndexOf("¶", start +1);
+                if (start == -1) break;
+
+                var end = documentContent.LastIndexOf('>', start);
+
+                var possiblyAFloat = documentContent.Substring(end + 1, start - end - 2).Trim();
+                if(float.TryParse(possiblyAFloat, out float afloat))
+                {
+                    //Console.WriteLine("Found a PalaiValue " + afloat);
+                    return afloat;
+                }
             }
 
-            Console.WriteLine("I asume it worked");
-
-            return 0;
+            Console.WriteLine("No float like value found that could be the balance");
+            return float.NaN;
         }
     }
 }

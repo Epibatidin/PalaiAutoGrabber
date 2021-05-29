@@ -30,9 +30,13 @@ namespace PalaiAutoGrabber
                 throw new Exception("expected to find a authToken form - but there was no postback form on " + postTarget);
 
             var authNode = formNode.SelectSingleNode(".//input[@name='" + authTokenName + "']");
-            var authToken = authNode.GetAttributeValue("value", "notset");
-            if (authToken.Length != 88)
-                throw new Exception("the authtoken is not 88 chars long");
+            if(authNode == null)
+                throw new Exception("formElement (" + authTokenName + ") that contain authtoken was not found");
+            
+            var defaultValue = "notset";
+            var authToken = authNode.GetAttributeValue("value", defaultValue);
+            if (authToken == defaultValue)
+                throw new Exception("the authtoken can not be found on input element");
 
             return authToken;
         }

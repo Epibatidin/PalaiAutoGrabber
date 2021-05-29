@@ -36,7 +36,7 @@ namespace PalaiAutoGrabber
             var loginUrl = ResponseHelper.PalaiBaseUrl + relativeUrl;
             Console.WriteLine("Getting Login Page");
             
-            var loginGet = Await(_client.GetAsync(loginUrl));           
+            var loginGet = _client.GetAsync(loginUrl);           
             var htmlDoc = _responseHelper.ResponseToHtml(loginGet);
             var authToken = _formHelper.GetAuthTokenFromForm(htmlDoc, relativeUrl);
             Console.WriteLine("AuthToken found" + authToken);
