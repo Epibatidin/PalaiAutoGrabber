@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
+
 using Microsoft.Extensions.Configuration;
+
+using PalaiAutoGrabber.Pages;
 
 namespace PalaiAutoGrabber
 {
     public class Program
     {
-        private const string TransfersUrl = "/a/name+someGUID/transactions"; // ToDo change
-        private const string PushoverKey = "token=foo&user=bar&message=PalimPalim"; // ToDo change
-
-        private static void Main()
+        private static async Task Main()
         {
             ConfigurationBuilder configBuilder = new ConfigurationBuilder();
             configBuilder.AddJsonFile("appSettings.json", false);
@@ -23,50 +21,56 @@ namespace PalaiAutoGrabber
 
             bool justEndWhenDone = palaiConfig.Silent;
             var responseHelper = new ResponseHelper();
-            var formHelper = new FormHelper();
             foreach (var account in palaiConfig.Accounts)
             {
                 Console.WriteLine("Grabbing for " + account.UserName);
                 try
-                {                    
-                    var palaiClient = new PalaiClient(responseHelper, formHelper);
+                {
+                    var palaiClient = new PalaiClient(responseHelper);
+                    var loginPage = new LoginPage(palaiClient);
+                    await loginPage.Navigate();
+                    var dashBoard = await loginPage.Login(account);
+                    await dashBoard.Navigate();
+                    var recertification = dashBoard.RequiresRecertification();
+                    if (recertification != null) {
+                        Console.WriteLine("===============================================");
+                        Console.WriteLine("The Palai Account is outdated");
+                        Console.WriteLine("Trying to get a new code");                        
+                        await recertification.Navigate();
+                        await recertification.IssueRecertification(account);
+                        Console.WriteLine("The process ends here for today");
+                        Console.WriteLine("===============================================");
+                        continue;
+                    }
+                    var incomePage = new IncomePage(loginPage.AuthToken, palaiClient);
+                    await incomePage.Navigate();
+                    if(!await incomePage.GrabTheCash())
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine("In that specific case that means that there is just no basic income available");
+                        Console.ResetColor();
+                    }
 
-                    var loggedIn = palaiClient.Login(account);
+                    await dashBoard.Navigate();
+                    var cash = dashBoard.getCashAmountFromDashBoard();
 
-                    loggedIn.GrabTheCash();
-
-                    var cash = loggedIn.getCashAmountFromDashBoard();
-                    Console.WriteLine("Current Balance : " + cash);
+                    Console.Write("Current Balance : ");
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine(cash);
+                    Console.ForegroundColor = ConsoleColor.Gray;
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     justEndWhenDone = false;
-                    Console.WriteLine("Error : " + e);                    
+                    Console.WriteLine("Error : " + e);
                 }
             };
             Console.WriteLine("Nothing more todo");
-            if(!justEndWhenDone)
+            if (!justEndWhenDone)
             {
                 Console.WriteLine("Press the \"Any Key\" - Key to close");
                 Console.ReadLine();
             }
         }
-               
-        private static void SendToPushoverApi(string grabBasicIncomeUrl, string balance)
-        {
-            var client = new HttpClient();
-            var toSend = string.Format($"{PushoverKey} {balance}&title=PalimPalim&url={grabBasicIncomeUrl}");
-            var now = DateTime.Now;
-            if (now.Hour >= 22 || now.Hour < 7)
-                toSend = string.Format("{0}&sound=none", toSend);
-
-            client.PostAsync("https://api.pushover.net/1/messages.json", new StringContent(toSend, Encoding.UTF8, "application/x-www-form-urlencoded")).GetAwaiter().GetResult();
-        }
-        
-        public static T Await<T>(Task<T> task)
-        {
-            return task.ConfigureAwait(false).GetAwaiter().GetResult();
-        }
-
     }
-}  
+}

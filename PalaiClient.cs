@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
-using static PalaiAutoGrabber.Program;
+using System.Text;
+using System.Threading.Tasks;
+
+using HtmlAgilityPack;
 
 namespace PalaiAutoGrabber
 {
@@ -12,56 +16,81 @@ namespace PalaiAutoGrabber
     }
 
     public class PalaiClient : IPalaiClient
-    {          
+    {
         private ResponseHelper _responseHelper;
-        private FormHelper _formHelper;
         private HttpClient _client;
+        public Uri PalaiBaseUrl;
 
-        public PalaiClient(ResponseHelper responseHelper,
-            FormHelper formHelper)
+        public PalaiClient(ResponseHelper responseHelper)
         {
             _responseHelper = responseHelper;
-            _formHelper = formHelper;
-
+            PalaiBaseUrl = new Uri("https://palai.org/", UriKind.Absolute);
             HttpClientHandler httpClientHandler = new HttpClientHandler();
             httpClientHandler.AllowAutoRedirect = false;
             httpClientHandler.AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate;
 
             _client = new HttpClient(httpClientHandler);
         }
-        
-        public IAuthentificatedPalaiClient Login(Account account)
+
+        private Uri doUrlThing(string url)
         {
-            string relativeUrl = "/u/sign_in";
-            var loginUrl = ResponseHelper.PalaiBaseUrl + relativeUrl;
-            Console.WriteLine("Getting Login Page");
-            
-            var loginGet = _client.GetAsync(loginUrl);           
-            var htmlDoc = _responseHelper.ResponseToHtml(loginGet);
-            var authToken = _formHelper.GetAuthTokenFromForm(htmlDoc, relativeUrl);
-            Console.WriteLine("AuthToken found" + authToken);
+            var uri = new Uri(PalaiBaseUrl, url);
+            var uriBuilder = new UriBuilder(uri);
 
-            var token = new AuthToken();
-            token.AccountId = account.Id;
-                
-            var postbackBody = _formHelper.FillForm(_formHelper.AuthValue(authToken), PostableAccount(account));
-            Console.WriteLine("Logging In");
-            var response = Await(_client.PostAsync(loginUrl, postbackBody));
-            if (response.StatusCode != System.Net.HttpStatusCode.Found)
-                throw new Exception("Expected a redirect to the dashboard");
-            Console.WriteLine("Redirect");
-            var data = Await(response.Content.ReadAsStringAsync());
-            if (!data.Contains("account/dashboard"))
-                throw new Exception("Expected a redirect to the dashboard");
+            var path = uriBuilder.Path;
+            var position = path.IndexOf('/', 1);
+            if (position == 3)
+                return uri;
 
-            Console.WriteLine("Succeed");
-            return new AuthentificatedPalaiClient(_responseHelper, _formHelper,_client, token);                       
+            uriBuilder.Path = "/de" + path;
+            return uriBuilder.Uri;
         }
-                
-        private static IEnumerable<Tuple<string, string>> PostableAccount(Account account)
+
+        private Uri makeAbsoluteUrl(string url)
         {
-            yield return Tuple.Create("user[email]", account.UserName);
-            yield return Tuple.Create("user[password]", account.Password);
+            var uri = doUrlThing(url);
+            return uri;
+        }
+
+        public async Task<HtmlDocument> GetHtmlAsync(string url)
+        {
+            var loginGet = _client.GetAsync(makeAbsoluteUrl(url));
+            var htmlDoc = await _responseHelper.ResponseToHtmlAsync(loginGet);
+            return htmlDoc;
+        }
+
+        public async Task<HttpResponseMessage> GetAsync(string url)
+        {
+            var loginGet = await _client.GetAsync(makeAbsoluteUrl(url));
+            return loginGet;
+        }
+
+        private StringContent FillForm(params IEnumerable<Tuple<string, string>>[] values)
+        {
+            StringBuilder postBackData = new StringBuilder();
+            foreach (var setOfValues in values)
+            {
+                foreach (var kv in setOfValues)
+                {
+                    postBackData.Append(WebUtility.UrlEncode(kv.Item1)).Append('=').Append(WebUtility.UrlEncode(kv.Item2)).Append('&');
+                }
+            }
+            postBackData.Length--;
+
+            var content = new StringContent(postBackData.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
+            return content;
+        }
+
+        public async Task<HttpResponseMessage> PostAsync(string url, params IEnumerable<Tuple<string, string>>[] values)
+        {
+            var formPayload = FillForm(values);
+
+            return await _client.PostAsync(makeAbsoluteUrl(url), formPayload);
+        }
+
+        public async Task<HtmlDocument> ToHtml(Task<HttpResponseMessage> message)
+        {
+            return await _responseHelper.ResponseToHtmlAsync(message);
         }
     }
 }

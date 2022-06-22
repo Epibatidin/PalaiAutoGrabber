@@ -7,11 +7,28 @@ using System.Text;
 
 namespace PalaiAutoGrabber
 {
-    public class FormHelper
+    public class FormContext
+    {
+        public IEnumerable<Tuple<string, string>> AuthToken;
+
+        public HtmlNode Form;
+        public string Url;
+    }
+
+    public class FormNotFoundException : Exception
+    {
+        public FormNotFoundException(string message) : base(message)
+        {
+
+        }
+    }
+
+
+    public static class FormHelper
     {
         private static string authTokenName = "authenticity_token";
         
-        private HtmlNode FindFormByPostUrl(HtmlDocument htmlDoc, string postTarget)
+        public static HtmlNode FindFormByPostUrl(HtmlDocument htmlDoc, string postTarget)
         {
             var formNodes = htmlDoc.DocumentNode.SelectNodes("//form");
 
@@ -22,12 +39,12 @@ namespace PalaiAutoGrabber
             }
             return null;
         }
-
-        public string GetAuthTokenFromForm(HtmlDocument htmlDoc, string postTarget)
+                
+        public static FormContext FindFormContext(HtmlDocument htmlDoc, string postTarget)
         {
             var formNode = FindFormByPostUrl(htmlDoc, postTarget);
             if (formNode == null)
-                throw new Exception("expected to find a authToken form - but there was no postback form on " + postTarget);
+                throw new FormNotFoundException("expected to find a authToken form - but there was no postback form on " + postTarget);
 
             var authNode = formNode.SelectSingleNode(".//input[@name='" + authTokenName + "']");
             if(authNode == null)
@@ -38,29 +55,13 @@ namespace PalaiAutoGrabber
             if (authToken == defaultValue)
                 throw new Exception("the authtoken can not be found on input element");
 
-            return authToken;
-        }
+            var context = new FormContext();
 
-        public StringContent FillForm(params IEnumerable<Tuple<string, string>>[] values)
-        {
-            StringBuilder postBackData = new StringBuilder();
-            foreach (var setOfValues in values)
-            {
-                foreach (var kv in setOfValues)
-                {
-                    postBackData.Append(WebUtility.UrlEncode(kv.Item1)).Append('=').Append(WebUtility.UrlEncode(kv.Item2)).Append('&');
-                }
-            }
-            postBackData.Length--;
-
-            var content = new StringContent(postBackData.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
-            return content;
+            context.Url = formNode.Attributes["action"].Value;
+            context.AuthToken = new[] { Tuple.Create(authTokenName, authToken) };
+            context.Form = formNode;
+            Console.WriteLine("AuthToken found " + authToken);
+            return context;
         }
-        
-        public IEnumerable<Tuple<string, string>> AuthValue(string authToken)
-        {
-            yield return Tuple.Create(authTokenName, authToken);
-        }
-
     }
 }

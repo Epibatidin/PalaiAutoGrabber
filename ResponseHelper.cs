@@ -2,20 +2,11 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using static PalaiAutoGrabber.Program;
 
 namespace PalaiAutoGrabber
 {
     public class ResponseHelper
     {
-        public const string PalaiBaseUrl = "https://palai.org/de";
-
-        public HtmlDocument ResponseToHtml(Task<HttpResponseMessage> responseMessage)
-        {
-            return Await(ResponseToHtmlAsync(responseMessage));
-        }
-
-
         public async Task<HtmlDocument> ResponseToHtmlAsync(Task<HttpResponseMessage> responseMessage)
         {
             var data = await ResponseToStringAsync(responseMessage);
@@ -24,10 +15,6 @@ namespace PalaiAutoGrabber
             return htmlDoc;
         }
 
-        public string ResponseToString(Task<HttpResponseMessage> responseMessage)
-        {
-            return Await(ResponseToStringAsync(responseMessage));
-        }
         public async Task<string> ResponseToStringAsync(Task<HttpResponseMessage> responseMessage)
         {
             var response = await responseMessage;
@@ -37,6 +24,7 @@ namespace PalaiAutoGrabber
 
             return data;
         }
+
 
         /*
         public string ExtractAuthCookie(HttpResponseMessage response)
