@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 using HtmlAgilityPack;
@@ -9,8 +10,39 @@ namespace PalaiAutoGrabber.Pages
     {
         private readonly AuthToken _token;
         private readonly IPalaiClient _client;
-        private HtmlDocument _activePageHtml;
+        private HtmlNode _activeContentArea;
         private string _relativeUrl;
+
+        private class RecertificationPageSelector
+        {
+            private readonly string _url;
+
+            public RecertificationPageSelector(string url)
+            {
+                _url = url;
+            }
+
+            
+
+            public bool Filter(HtmlNode node)
+            {
+                if (node.NodeType != HtmlNodeType.Element) return false;
+                if (node.Name != "a") return false;
+
+                if (!node.HasAttributes) return false;
+                var href = node.Attributes["href"];
+                if (string.IsNullOrWhiteSpace(href.Value)) return false;
+
+                var isMatch = href.Value.IndexOf(_url, StringComparison.InvariantCultureIgnoreCase) != -1;
+                return isMatch;
+            }
+
+            public string GetUrl(HtmlNode node)
+            {
+                return node.Attributes["href"].Value;
+            }
+        }
+
 
         public DashboardPage(AuthToken token, IPalaiClient client)
         {
@@ -23,43 +55,37 @@ namespace PalaiAutoGrabber.Pages
         {
             Console.WriteLine("Getting Dashboard Page");
 
-            var page = _client.GetHtmlAsync(_relativeUrl);
-            _activePageHtml = await page;
+            var page = await _client.GetHtmlAsync(_relativeUrl);
+            _activeContentArea = page.DocumentNode.SelectSingleNode("//article");
+            if (_activeContentArea == null)
+                throw new Exception("Dashboard Content Area not found !");
         }
 
         public RecertificationPage RequiresRecertification()
         {
-            var links = _activePageHtml.DocumentNode.SelectNodes("//a");
-            var userId = $"/users/{_token.AccountId}/telephone_number_claim";
-            string url = null;
-            foreach (var link in links)
-            {
-                var href = link.Attributes["href"];
-                if (href.Value.IndexOf(userId, StringComparison.InvariantCultureIgnoreCase) == -1)
-                    continue;
+            var selector = new RecertificationPageSelector($"/users/{_token.AccountId}/telephone_number_claim");
 
-                url = href.Value;
-                break;
-            }
-
-            if (string.IsNullOrEmpty(url))
-                return null;
-
+            var node = _activeContentArea.Descendants().Where(selector.Filter).FirstOrDefault();
+            if (node == null) return null;
+            
+            var url = selector.GetUrl(node);
             return new RecertificationPage(url, _token, _client);
         }
         public float getCashAmountFromDashBoard()
         {
-            int start = 0;          
+            int start = 0;
+
+            var text = _activeContentArea.InnerHtml;
 
             while (true)
             {
-                start = _activePageHtml.ParsedText.IndexOf("¶", start + 1);
+                start = text.IndexOf("¶", start + 1);
                 if (start == -1)
                     break;
 
-                var end = _activePageHtml.ParsedText.LastIndexOf('>', start);
+                var end = text.LastIndexOf('>', start);
 
-                var possiblyAFloat = _activePageHtml.ParsedText.Substring(end + 1, start - end - 2).Trim();
+                var possiblyAFloat = text.Substring(end + 1, start - end - 2).Trim();
                 if (float.TryParse(possiblyAFloat, out float afloat))
                 {
                     //Console.WriteLine("Found a PalaiValue " + afloat);
