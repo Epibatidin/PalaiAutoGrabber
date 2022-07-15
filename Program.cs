@@ -10,7 +10,6 @@ namespace PalaiAutoGrabber
 {
     public class Program
     {
-
         public static async Task Main()
         {
             ConfigurationBuilder configBuilder = new ConfigurationBuilder();
@@ -40,11 +39,20 @@ namespace PalaiAutoGrabber
                 Console.WriteLine("Press the \"Any Key\" - Key to close");
                 Console.ReadLine();
             }
+            else
+            {
+                for (var i = 0; i < 3; i++)
+                {
+                    await Task.Delay(1000);
+                    Console.Write(".");
+                }
+            }
         }
 
 
         private static async Task DoForAccount(Account account, ResponseHelper responseHelper)
         {
+            Console.WriteLine("===============================================");
             Console.WriteLine("Grabbing for " + account.UserName);
 
             var palaiClient = new PalaiClient(responseHelper);
